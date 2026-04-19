@@ -45,6 +45,10 @@ const colors = [
 ];
 
 export default function App() {
+  const [progressFactor, setProgressFactor] = useState(1);
+  const [mapHeight, setMapHeight] = useState(500);
+  const [zoomLevel, setZoomLevel] = useState(5);
+  const [isFullscreen, setIsFullscreen] = useState(false); // slider control (0–2x)
   const mapRef = useRef(null);
   const leafletMap = useRef(null);
 
@@ -83,7 +87,7 @@ export default function App() {
     setClasses(updated);
   };
 
-  const getTotalKm = (words) => words * 1;
+  const getTotalKm = (words) => words * progressFactor;
   const getLap = (km) => Math.floor(km / TOTAL_KM);
   const getKmInLap = (km) => km % TOTAL_KM;
 
@@ -137,7 +141,7 @@ export default function App() {
     if (!mapRef.current) return;
 
     if (!leafletMap.current) {
-      leafletMap.current = L.map(mapRef.current).setView([-30, 25], 5);
+      leafletMap.current = L.map(mapRef.current).setView([-30, 25], zoomLevel);
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
         attribution: "© OpenStreetMap"
       }).addTo(leafletMap.current);
@@ -209,7 +213,17 @@ export default function App() {
         .addTo(leafletMap.current)
         .bindPopup(`${c.name} • Lap ${lap} • ${kmInLap.toFixed(0)} km`);
     });
-  }, [classes, routeCoords]);
+  }, [classes, routeCoords, zoomLevel]);
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
 
   const copyMapLink = async () => {
     const encoded = btoa(JSON.stringify(classes));
@@ -231,7 +245,57 @@ export default function App() {
     <div style={{ padding: isMapOnly ? 0 : 20, position: "relative" }}>
 
       {!isMapOnly && (
-        <button onClick={copyMapLink}>📤 Share Static Map</button>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={copyMapLink}>📤 Share Static Map</button>
+          <button onClick={toggleFullscreen}>
+            {isFullscreen ? "🡼 Exit Fullscreen" : "⛶ Fullscreen"}
+          </button>
+        </div>
+      )}
+
+      {!isMapOnly && (
+        <div style={{ margin: "10px 0" }}>
+          <label>Map Progress Slider: {Math.round(progressFactor * 100)}%</label>
+          <input
+            type="range"
+            min="0"
+            max="2"
+            step="0.01"
+            value={progressFactor}
+            onChange={(e) => setProgressFactor(Number(e.target.value))}
+            style={{ width: "100%" }}
+          />
+        </div>
+      )}
+
+      {!isMapOnly && (
+        <div style={{ margin: "10px 0" }}>
+          <label>Map Size: {mapHeight}px</label>
+          <input
+            type="range"
+            min="300"
+            max="900"
+            step="10"
+            value={mapHeight}
+            onChange={(e) => setMapHeight(Number(e.target.value))}
+            style={{ width: "100%" }}
+          />
+        </div>
+      )}
+
+      {!isMapOnly && (
+        <div style={{ margin: "10px 0" }}>
+          <label>Zoom Level: {zoomLevel}</label>
+          <input
+            type="range"
+            min="4"
+            max="10"
+            step="1"
+            value={zoomLevel}
+            onChange={(e) => setZoomLevel(Number(e.target.value))}
+            style={{ width: "100%" }}
+          />
+        </div>
       )}
 
       {!isMapOnly && classes.map((c,i)=>(
@@ -272,7 +336,7 @@ export default function App() {
         </div>
       )}
 
-      <div style={{ height: isMapOnly ? "100vh" : 500 }} ref={mapRef}></div>
+      <div style={{ height: isMapOnly ? "100vh" : mapHeight }} ref={mapRef}></div>
     </div>
   );
 }
